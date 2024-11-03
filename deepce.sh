@@ -660,9 +660,9 @@ enumerateContainers() {
     # Find containers...
     if [ "$dockerCommand" ]; then
         # Enumerate containers using docker
-        dockercontainers=$(docker ps --format "{{.Names}}" 2>/dev/null | wc -l)
+        dockercontainers=$(docker -H "unix://$dockerSockPath" ps --format "{{.Names}}" 2>/dev/null | wc -l)
         printMsg "Docker Containers........" "$dockercontainers"
-        docker ps -a
+        docker -H "unix://$dockerSockPath" ps -a
     elif [ "$dockerSockPath" ]; then
         # Enumerate containers using sock
         TODO "Enumerate container using sock"
