@@ -1062,6 +1062,8 @@ exploitDockerSock() {
   printSection "Exploiting Sock"
   printTip "$TIP_DOCKER_SOCK"
 
+  dockerSockCheck
+
   if ! [ -x "$(command -v curl)" ]; then
     printInstallAdvice "curl"
     exit
