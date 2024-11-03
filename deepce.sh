@@ -1001,6 +1001,7 @@ prepareExploit() {
 }
 
 exploitDocker() {
+  dockerSockCheck
   printSection "Exploiting Docker"
   printTip "$TIP_DOCKER_CMD"
 
